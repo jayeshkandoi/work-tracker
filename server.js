@@ -68,7 +68,86 @@ if (sa) {
     },
   };
 }
+/* ---------- dropdown names: Firestore ---------- */
 
+let dropdownStore;
+
+if (sa) {
+  const db = admin.firestore();
+  const ref = db.collection("settings").doc("dropdowns");
+
+  dropdownStore = {
+    async list() {
+      const snap = await ref.get();
+      const d = snap.exists ? snap.data() : {};
+
+      return {
+        clients: Array.isArray(d.clients) ? d.clients : [],
+        people: Array.isArray(d.people) ? d.people : []
+      };
+    },
+
+    async add(type, name) {
+      const field = type === "client" ? "clients" : "people";
+
+      return db.runTransaction(async (t) => {
+        const snap = await t.get(ref);
+        const d = snap.exists ? snap.data() : {};
+        const current = Array.isArray(d[field]) ? d[field] : [];
+
+        const exists = current.some(
+          n => n.toLowerCase() === name.toLowerCase()
+        );
+
+        if (exists) return { duplicate: true };
+
+        const updated = [...current, name];
+
+        t.set(ref, { [field]: updated }, { merge: true });
+
+        return { success: true, name, list: updated };
+      });
+    }
+  };
+
+} else {
+  // Local development fallback
+  const file = path.join(__dirname, "dropdowns.json");
+
+  const loadLists = () => {
+    try {
+      return JSON.parse(fs.readFileSync(file, "utf8"));
+    } catch {
+      return { clients: [], people: [] };
+    }
+  };
+
+  const saveLists = (data) => {
+    fs.writeFileSync(file, JSON.stringify(data, null, 2));
+  };
+
+  dropdownStore = {
+    async list() {
+      return loadLists();
+    },
+
+    async add(type, name) {
+      const data = loadLists();
+      const field = type === "client" ? "clients" : "people";
+
+      if (data[field].some(
+        n => n.toLowerCase() === name.toLowerCase()
+      )) {
+        return { duplicate: true };
+      }
+
+      data[field].push(name);
+      saveLists(data);
+
+      return { success: true, name, list: data[field] };
+    }
+  };
+}
 /* ---------- API ---------- */
 const wrap = (fn) => (req, res) => fn(req, res).catch((e) => { console.error(e); res.status(500).json({ error: "Server error" }); });
 
@@ -88,7 +167,40 @@ app.put("/api/entries/:id", wrap(async (req, res) => {
   if (out.code === 409) return res.status(409).json({ error: "This entry is completed and locked." });
   res.json(out.rec);
 }));
+// Get all shared dropdown names
+app.get("/api/lists", wrap(async (req, res) => {
+  res.set("Cache-Control", "no-store");
+  res.json(await dropdownStore.list());
+}));
 
+// Add a new shared dropdown name
+app.post("/api/lists/:type", wrap(async (req, res) => {
+  const type = req.params.type;
+
+  if (!["client", "person"].includes(type)) {
+    return res.status(400).json({
+      error: "Invalid list type."
+    });
+  }
+
+  const name = String(req.body.name || "").trim().slice(0, 100);
+
+  if (!name) {
+    return res.status(400).json({
+      error: "Name is required."
+    });
+  }
+
+  const result = await dropdownStore.add(type, name);
+
+  if (result.duplicate) {
+    return res.status(409).json({
+      error: "This name already exists."
+    });
+  }
+
+  res.status(201).json(result);
+}));
 app.get("/healthz", (req, res) => res.send("ok"));
 
 const port = process.env.PORT || 3000;
