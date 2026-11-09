@@ -277,6 +277,21 @@ $("export").onclick=()=>{
 };
 render();
 initStore();
+document.addEventListener("DOMContentLoaded", function () {
+
+    const clientDropdown = document.getElementById("client");
+    const newClientInput = document.getElementById("newClientName");
+
+    clientDropdown.addEventListener("change", function () {
+        if (this.value) {
+            newClientInput.disabled = true;
+            newClientInput.value = "";
+        } else {
+            newClientInput.disabled = false;
+        }
+    });
+
+});
 </script>
 </body>
 </html>
