@@ -257,9 +257,15 @@ function reset(){
 }
 $("save").onclick=async()=>{
   if(!$("client").value.trim()||!$("fund").value.trim()){$("msg").textContent="Client Name and Fund Name are required.";return}
+  const coName=$("co").value.trim();
+  const helperName=$("by").value.trim();
+  if($("help").value==="Yes" && coName && helperName && coName.toLocaleLowerCase()===helperName.toLocaleLowerCase()){
+    $("msg").textContent="Error: CO Name and Help Provided By cannot be the same person. Please select different names.";
+    return;
+  }
   $("msg").textContent="";
   const rec={client:$("client").value.trim(),fund:$("fund").value.trim(),ttype:$("ttype").value,period:$("period").value.trim(),signoff:$("signoff").value,
-    co:$("co").value,help:$("help").value,by:$("by").value,status:$("status").value};
+    co:coName,help:$("help").value,by:helperName,status:$("status").value};
   $("save").disabled=true;
   try{
     if(editId){
