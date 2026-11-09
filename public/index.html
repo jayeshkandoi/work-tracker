@@ -78,7 +78,7 @@ tr:last-child td{border-bottom:0}
 <div><label>Task Type</label><select id="ttype"><option>Accounting</option><option>Activity Booking</option></select></div>
 <div><label>Accounting Period</label><input id="period" placeholder="e.g. Sep 2026"></div>
 <div><label>Portfolio Sign Off Date/Activity due date</label><input id="signoff" type="date"></div>
-<div><label>CO Name</label><select id="co"></select><div class="add-inline"><input id="newCoName" placeholder="Enter a new CO name"><button type="button" class="ghost sm" id="addCoName">Add to list</button></div></div>
+<div><label>CO Name</label><select id="co"></select></div>
 <div><label>Additional Help Required</label><select id="help"><option>No</option><option>Yes</option></select></div>
 <div><label>Help Provided By</label><select id="by"></select><div class="add-inline"><input id="newHelpName" placeholder="Enter a name"><button type="button" class="ghost sm" id="addHelpName">Add to list</button></div></div>
 
@@ -125,9 +125,15 @@ function saveExtraNames(key,list){
   }
 }
 const extraClients=loadExtraNames("dailyTrackerExtraClients");
-const legacyExtraNames=loadExtraNames("dailyTrackerExtraNames");
-const extraCoNames=loadExtraNames("dailyTrackerExtraCoNames");
+const legacyExtraNames=loadExtraNames("dailyTrackerExtraNames").filter(n=>n.trim().toLowerCase()!=="e");
+const extraCoNames=loadExtraNames("dailyTrackerExtraCoNames").filter(n=>n.trim().toLowerCase()!=="e");
 const extraHelpNames=loadExtraNames("dailyTrackerExtraHelpNames");
+// One-time cleanup: remove the stray "e" entry from CO-related browser storage.
+try {
+  localStorage.setItem("dailyTrackerExtraCoNames", JSON.stringify(extraCoNames));
+  const cleanedLegacyNames=legacyExtraNames.filter(n=>n.trim().toLowerCase()!=="e");
+  localStorage.setItem("dailyTrackerExtraNames", JSON.stringify(cleanedLegacyNames));
+} catch(e) {}
 const CO_NAMES=[...NAMES];
 const HELP_NAMES=[...NAMES];
 extraClients.forEach(n=>{if(!CLIENTS.some(x=>x.toLowerCase()===n.toLowerCase()))CLIENTS.push(n)});
@@ -176,11 +182,6 @@ $("addClientName").onclick=()=>addNameToList({
   inputId:"newClientName",selectId:"client",list:CLIENTS,
   storageKey:"dailyTrackerExtraClients",refresh:populateClients,
   successLabel:"Client"
-});
-$("addCoName").onclick=()=>addNameToList({
-  inputId:"newCoName",selectId:"co",list:CO_NAMES,
-  storageKey:"dailyTrackerExtraCoNames",refresh:populatePeople,
-  successLabel:"CO"
 });
 $("addHelpName").onclick=()=>addNameToList({
   inputId:"newHelpName",selectId:"by",list:HELP_NAMES,
