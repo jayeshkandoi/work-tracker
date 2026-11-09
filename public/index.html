@@ -1,0 +1,203 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Daily Work Tracker</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<style>
+:root{box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px);
+--bg:#f3f5f9;--card:#fff;--text:#1b2433;--muted:#667487;--line:#e0e5ee;--accent:#1f4fbf;--accent2:#e8eefc;
+--pend:#fdeaea;--pendf:#c0392b;--prog:#fff6d9;--progf:#b7791f;--done:#e1f6e6;--donef:#228b4a}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#10141b;--card:#1a1f29;--text:#e7ebf2;--muted:#93a0b3;--line:#2c3442;--accent:#7c9cf2;--accent2:#232d47;--pend:#43232a;--pendf:#ff8f85;--prog:#463c1c;--progf:#f0c667;--done:#1d3f2a;--donef:#6fd196}}
+:root[data-theme="dark"]{--bg:#10141b;--card:#1a1f29;--text:#e7ebf2;--muted:#93a0b3;--line:#2c3442;--accent:#7c9cf2;--accent2:#232d47;--pend:#43232a;--pendf:#ff8f85;--prog:#463c1c;--progf:#f0c667;--done:#1d3f2a;--donef:#6fd196}
+html{scroll-padding-top:env(safe-area-inset-top,0px)}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--text);font:14px/1.45 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif}
+header{background:var(--card);border-bottom:1px solid var(--line);padding:14px 20px;display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap}
+h1{font-size:19px;margin:0}header small{color:var(--muted)}
+main{max-width:1280px;margin:0 auto;padding:18px 20px}
+.card{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:16px;margin-bottom:16px}
+.card h2{font-size:13px;text-transform:uppercase;letter-spacing:.05em;color:var(--muted);margin:0 0 12px}
+.kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:12px;margin-bottom:16px}
+.kpi{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:14px;border-left:4px solid var(--accent)}
+.kpi b{display:block;font-size:26px;line-height:1.1}.kpi span{color:var(--muted);font-size:12px}
+.kpi.p{border-left-color:var(--pendf)}.kpi.i{border-left-color:var(--progf)}.kpi.c{border-left-color:var(--donef)}
+.two{display:grid;grid-template-columns:1fr 1.4fr;gap:16px}
+@media(max-width:800px){.two{grid-template-columns:1fr}}
+.stack{display:flex;height:16px;border-radius:8px;overflow:hidden;background:var(--line)}
+.stack i{display:block;height:100%}
+.pb{background:var(--pendf)}.ib{background:var(--progf)}.cb{background:var(--donef)}
+.legend{display:flex;gap:14px;flex-wrap:wrap;margin-top:10px;color:var(--muted);font-size:12px}
+.legend em{display:inline-block;width:9px;height:9px;border-radius:50%;margin-right:5px;font-style:normal}
+.co{display:grid;grid-template-columns:84px 1fr 28px;align-items:center;gap:8px;margin-bottom:7px;font-size:13px}
+.co .stack{height:10px}
+.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:12px}
+label{display:block;font-size:12px;color:var(--muted);margin-bottom:4px;font-weight:600}
+input,select{width:100%;padding:9px 10px;border:1px solid var(--line);border-radius:8px;background:var(--bg);color:var(--text);font:inherit}
+input:focus,select:focus{outline:2px solid var(--accent);outline-offset:-1px}
+input:disabled,select:disabled{opacity:.5}
+button{padding:9px 16px;border:0;border-radius:8px;background:var(--accent);color:var(--bg);font:inherit;font-weight:600;cursor:pointer}
+button.ghost{background:transparent;color:var(--text);border:1px solid var(--line)}
+button.sm{padding:5px 12px;font-size:13px}
+button:disabled{opacity:.35;cursor:not-allowed}
+.row{display:flex;gap:8px;flex-wrap:wrap;margin-top:14px;align-items:center}
+.bar{display:flex;gap:10px;flex-wrap:wrap;align-items:end;margin-bottom:12px}
+.bar>div{flex:1;min-width:140px}.bar>button{flex:0 0 auto}
+.wrap{overflow-x:auto;border:1px solid var(--line);border-radius:10px}
+table{border-collapse:collapse;width:100%;min-width:1000px}
+th,td{padding:10px 12px;text-align:left;border-bottom:1px solid var(--line);white-space:nowrap}
+th{font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.05em;background:var(--bg);position:sticky;top:0}
+tr.Pending td{background:var(--pend)}tr.Completed td{background:var(--done)}tr.InProgress td{background:var(--prog)}
+tr:last-child td{border-bottom:0}
+.pill{padding:3px 10px;border-radius:99px;font-size:12px;font-weight:700;background:var(--card)}
+.Pending .pill{color:var(--pendf)}.InProgress .pill{color:var(--progf)}.Completed .pill{color:var(--donef)}
+.empty{padding:28px;text-align:center;color:var(--muted)}
+#msg{color:var(--muted);font-size:13px}
+#sync{font-size:12px;color:var(--muted);margin-top:2px}
+</style>
+</head>
+<body>
+<header>
+<div><h1>Daily Work Tracker</h1><small id="today"></small><div id="sync">Connecting to server…</div></div>
+<button id="export">Export to Excel</button>
+</header>
+<main>
+<section class="kpis" id="kpis"></section>
+<section class="two">
+<div class="card"><h2>Status overview</h2><div class="stack" id="ov"></div>
+<div class="legend"><span><em class="pb"></em>Pending</span><span><em class="ib"></em>In Progress</span><span><em class="cb"></em>Completed</span></div></div>
+<div class="card"><h2>Workload by CO</h2><div id="cos"></div></div>
+</section>
+<section class="card">
+<h2 id="ftitle">New entry</h2>
+<div class="grid">
+<div><label>Client Name</label><input id="client"></div>
+<div><label>Fund Name</label><input id="fund"></div>
+<div><label>Task Type</label><select id="ttype"><option>Accounting</option><option>Activity Booking</option></select></div>
+<div><label>Accounting Period</label><input id="period" placeholder="e.g. Sep 2026"></div>
+<div><label>Portfolio Sign Off Date</label><input id="signoff" type="date"></div>
+<div><label>CO Name</label><select id="co"></select></div>
+<div><label>Additional Help Required</label><select id="help"><option>No</option><option>Yes</option></select></div>
+<div><label>Help Provided By</label><select id="by"></select></div>
+<div><label>Help Type</label><select id="htype"><option value=""></option><option>Accounting</option><option>Activity Booking</option></select></div>
+<div><label>Final Status</label><select id="status"><option>Pending</option><option>In Progress</option><option>Completed</option></select></div>
+</div>
+<div class="row"><button id="save">Add Entry</button><button id="cancel" class="ghost" style="display:none">Cancel</button><span id="msg"></span></div>
+</section>
+<section class="card">
+<h2>Work log</h2>
+<div class="bar">
+<div><label>Search</label><input id="q" placeholder="Client or fund"></div>
+<div><label>Status</label><select id="fs"><option value="">All</option><option>Pending</option><option>In Progress</option><option>Completed</option></select></div>
+<div><label>CO</label><select id="fc"></select></div>
+</div>
+<div class="wrap"><table>
+<thead><tr><th>S.No</th><th>Client</th><th>Fund</th><th>Task Type</th><th>Period</th><th>Sign Off</th><th>CO</th><th>Help?</th><th>Help By</th><th>Help Type</th><th>Status</th><th>Action</th></tr></thead>
+<tbody id="rows"></tbody></table></div>
+</section>
+</main>
+<script>
+const NAMES=["Lakshit","Prerna","Anirudha","Himanshu","Akshay","Gargi","Renu","Tarun","Saurabh","Hitesh"];
+const $=id=>document.getElementById(id);
+const esc=s=>String(s==null?"":s).replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+let data=[],editId=null,col=null;
+
+/* ---------- storage layer: talks to the Express API ---------- */
+async function api(path,opt){
+  const r=await fetch(path,{headers:{"Content-Type":"application/json"},...opt});
+  const j=await r.json().catch(()=>({}));
+  if(!r.ok)throw new Error(j.error||("HTTP "+r.status));
+  return j;
+}
+async function addEntry(rec){await api("/api/entries",{method:"POST",body:JSON.stringify(rec)});await refresh()}
+async function updateEntry(id,rec){await api("/api/entries/"+encodeURIComponent(id),{method:"PUT",body:JSON.stringify(rec)});await refresh()}
+let last="";
+async function refresh(){
+  try{
+    const d=await api("/api/entries");
+    $("sync").textContent="Shared and live: changes by your colleagues appear automatically.";
+    const s=JSON.stringify(d);
+    if(s!==last){last=s;data=d;if(editId&&!data.find(x=>x.id===editId))reset();render()}
+  }catch(e){$("sync").textContent="Cannot reach the server. What you see may be out of date."}
+}
+function initStore(){refresh();setInterval(refresh,5000)}
+
+/* ---------- UI ---------- */
+$("today").textContent=new Date().toLocaleDateString(undefined,{weekday:"long",day:"numeric",month:"long",year:"numeric"});
+const opts=a=>a.map(n=>`<option>${n}</option>`).join("");
+$("co").innerHTML=opts(NAMES);
+$("by").innerHTML='<option value=""></option>'+opts(NAMES);
+$("fc").innerHTML='<option value="">All</option>'+opts(NAMES);
+function syncHelp(){const no=$("help").value==="No";$("by").disabled=no;$("htype").disabled=no;if(no){$("by").value="";$("htype").value=""}}
+$("help").onchange=syncHelp;syncHelp();
+const cnt=(l,s)=>l.filter(r=>r.status===s).length;
+const seg=(p,i,c,t)=>t?`<i class="pb" style="width:${p/t*100}%"></i><i class="ib" style="width:${i/t*100}%"></i><i class="cb" style="width:${c/t*100}%"></i>`:"";
+function dash(){
+  const t=data.length,p=cnt(data,"Pending"),i=cnt(data,"In Progress"),c=cnt(data,"Completed");
+  const h=data.filter(r=>r.help==="Yes").length;
+  const k=[["","Total tasks",t],["p","Pending",p],["i","In progress",i],["c","Completed",c],["","Help requested",h],["","Completion rate",(t?Math.round(c/t*100):0)+"%"]];
+  $("kpis").innerHTML=k.map(x=>`<div class="kpi ${x[0]}"><b>${x[2]}</b><span>${x[1]}</span></div>`).join("");
+  $("ov").innerHTML=seg(p,i,c,t);
+  $("cos").innerHTML=NAMES.map(n=>{const l=data.filter(r=>r.co===n);return `<div class="co"><span>${n}</span><div class="stack">${seg(cnt(l,"Pending"),cnt(l,"In Progress"),cnt(l,"Completed"),l.length)}</div><b>${l.length}</b></div>`}).join("");
+}
+function view(){
+  const q=$("q").value.trim().toLowerCase(),s=$("fs").value,c=$("fc").value;
+  return data.map((r,i)=>({...r,sn:i+1})).filter(r=>(!s||r.status===s)&&(!c||r.co===c)&&(!q||((r.client||"")+" "+(r.fund||"")).toLowerCase().includes(q)));
+}
+function render(){
+  dash();
+  const v=view();
+  $("rows").innerHTML=v.length?v.map(r=>`<tr class="${esc(String(r.status).replace(" ",""))}">
+<td>${r.sn}</td><td>${esc(r.client)}</td><td>${esc(r.fund)}</td><td>${esc(r.ttype)}</td><td>${esc(r.period)}</td><td>${esc(r.signoff)}</td>
+<td>${esc(r.co)}</td><td>${esc(r.help)}</td><td>${esc(r.by)}</td><td>${esc(r.htype)}</td><td><span class="pill">${esc(r.status)}</span></td>
+<td><button class="ghost sm" data-id="${esc(r.id)}" ${r.status==="Completed"?'disabled title="Completed rows are locked"':""}>Edit</button></td></tr>`).join("")
+  :'<tr><td colspan="12" class="empty">No entries to show.</td></tr>';
+}
+function reset(){
+  editId=null;["client","fund","period","signoff"].forEach(k=>$(k).value="");
+  $("co").selectedIndex=0;$("ttype").selectedIndex=0;$("help").value="No";$("status").value="Pending";syncHelp();
+  $("save").textContent="Add Entry";$("cancel").style.display="none";$("ftitle").textContent="New entry";
+}
+$("save").onclick=async()=>{
+  if(!$("client").value.trim()||!$("fund").value.trim()){$("msg").textContent="Client Name and Fund Name are required.";return}
+  $("msg").textContent="";
+  const rec={client:$("client").value.trim(),fund:$("fund").value.trim(),ttype:$("ttype").value,period:$("period").value.trim(),signoff:$("signoff").value,
+    co:$("co").value,help:$("help").value,by:$("by").value,htype:$("htype").value,status:$("status").value};
+  $("save").disabled=true;
+  try{
+    if(editId){
+      const r=data.find(x=>x.id===editId);
+      if(!r||r.status==="Completed"){$("msg").textContent="This entry was completed by someone else and is now locked.";reset();return}
+      await updateEntry(editId,rec);
+    }else await addEntry(rec);
+    reset();
+  }catch(e){$("msg").textContent=e.message||"Could not save. Please try again.";}
+  finally{$("save").disabled=false}
+};
+$("cancel").onclick=reset;
+["q","fs","fc"].forEach(id=>$(id).oninput=render);
+$("rows").onclick=e=>{
+  const b=e.target.closest("button[data-id]");if(!b||b.disabled)return;
+  const r=data.find(x=>x.id===b.dataset.id);if(!r||r.status==="Completed")return;
+  editId=r.id;
+  $("client").value=r.client;$("fund").value=r.fund;$("ttype").value=r.ttype||"Accounting";$("period").value=r.period||"";$("signoff").value=r.signoff||"";
+  $("co").value=r.co;$("help").value=r.help;syncHelp();$("by").value=r.by||"";$("htype").value=r.htype||"";$("status").value=r.status;
+  $("save").textContent="Update Entry";$("cancel").style.display="";$("ftitle").textContent="Edit entry";
+  $("ftitle").scrollIntoView({behavior:"smooth"});
+};
+$("export").onclick=()=>{
+  const v=view();
+  if(!v.length){$("msg").textContent="Nothing to export.";return}
+  const rows=v.map(r=>({"S.No":r.sn,"Client Name":r.client,"Fund Name":r.fund,"Task Type":r.ttype,"Accounting Period":r.period,"Portfolio Sign Off Date":r.signoff,
+    "CO Name":r.co,"Additional Help Required":r.help,"Help Provided By":r.by,"Help Type":r.htype,"Final Status":r.status}));
+  const ws=XLSX.utils.json_to_sheet(rows);
+  ws["!cols"]=[6,22,22,18,16,22,12,22,16,16,13].map(w=>({wch:w}));
+  const wb=XLSX.utils.book_new();XLSX.utils.book_append_sheet(wb,ws,"Work Tracker");
+  XLSX.writeFile(wb,"daily-work-tracker-"+new Date().toISOString().slice(0,10)+".xlsx");
+};
+render();
+initStore();
+</script>
+</body>
+</html>
